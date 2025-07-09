@@ -14,3 +14,5 @@ Tested on - with:
 -Arduino Nano ATmega328P @16 MHz, PCA82C250, LM239N
 
 -Arduino IDE 0023
+
+![6206380500_1751724267](https://github.com/user-attachments/assets/fd5110c1-e968-42e3-8518-ac079dc4dcd6)
