@@ -1,16 +1,16 @@
 ### Arduino-AVCLan Mini Driver 
-This program enables the HU (Head Unit) CD Changer / AUX audio input on Toyota HU with Tuner & CD only. 
+This program enables the HU (Head Unit) CD Changer / AUX audio input on Toyota stereo with Tuner & TAPE/CD only. 
 
-Pressing CD button while no CD in rom will toggle the CD Changer/AUX input mode.
+AUX input is turned on immediately after turning the ignition
 
 #### Sources from http://www.compcar.ru/forum/showthread.php?t=4835,   https://github.com/KostyaSha/arduino-iebus    http://softservice.com.pl/corolla/avc/index.php
 ----
-Modified for handling the Toyota Avanza, HU Fujitsu Ten 86180-BZ380
+Modified for handling the 2000 Toyota Corolla E11, HU Fujitsu Ten 86180-1A120
 
 Tested on - with:
 
--Toyota Fujitsu Ten 86120, 86180-BZ380
+-Toyota Fujitsu Ten 86180-1A120 (TAPE player)
 
--Arduino Nano ATmega328P @16 MHz, Based on Resistor driver
+-Arduino Nano ATmega328P @16 MHz, PCA82C250, LM239N
 
--Arduino IDE v1.8.5
+-Arduino IDE 0023
