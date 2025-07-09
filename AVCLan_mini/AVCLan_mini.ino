@@ -12,6 +12,11 @@
 #include <BuffSerial.h>
 #include <config.h>
 
+// External declarations for messages from AVCLanCDch.cpp
+extern AvcOutMessage CmdPlayOk1;
+extern AvcOutMessage CmdPlayOk4;
+extern AvcOutMessage CmdPlayOk5;
+
 byte readSeq = 0;
 byte s_len	= 0;
 byte s_dig	= 0;
@@ -28,20 +33,25 @@ byte i;
 #define LED_ON	sbi(LED_PORT, LED_OUT);
 #define LED_OFF	cbi(LED_PORT, LED_OUT);
 
-void setup(){
-	// setup led
-	sbi(LED_DDR,  LED_OUT);
-	cbi(LED_PORT, LED_OUT);
+void setup() {
+    // Inicjalizacja portów, UART, AVCLan...
+    sbi(LED_DDR,  LED_OUT);
+    cbi(LED_PORT, LED_OUT);
 
-	bSerial.begin(250000);
-	avclan.begin();
-	avclanDevice.begin();
-	EERPOM_read_config();
-	bSerial.print_p(PSTR("AVCLan mini. Kochetkov Aleksey. v"));
-	bSerial.println(AVCLAN_VERSION);
-	bSerial.println();
+    bSerial.begin(250000);
+    avclan.begin();
+    avclanDevice.begin();
+    EERPOM_read_config();
+
+    bSerial.print_p(PSTR("AVCLan mini. Kochetkov Aleksey. v"));
+    bSerial.println(AVCLAN_VERSION);
+    bSerial.println();
+
+    delay(500);  // Delay 500 ms
+    if (!avclan.readonly) {  // Optional: only if not in readonly mode
+        sendRegisterCommand();  // Send registration command
+    }
 }
-
 void loop(){
 
 	if (INPUT_IS_SET){
@@ -185,22 +195,84 @@ void loop(){
 
 void sendMess(){
 	avclan.broadcast = AVC_MSG_DIRECT;
-	avclan.masterAddress = 0x0360;
-	avclan.slaveAddress  = 0x0140;
+	avclan.masterAddress = 0x0240;
+	avclan.slaveAddress  = 0x0160;
 	avclan.dataSize      = 0x05;
 	avclan.message[0]    = 0x00;
 	avclan.message[1]    = 0x01;
 	avclan.message[2]    = 0x12;
-	avclan.message[2]    = 0x10;
-	avclan.message[3]    = 0x63;
+	avclan.message[3]    = 0x10;
+	avclan.message[4]    = 0x43;
 	byte res = avclan.sendMessage();
+}
+
+// Function for sending a registration command and automatically starting playback
+void sendRegisterCommand(){
+  // Step 1: Sending a registration command
+  avclan.broadcast = AVC_MSG_DIRECT;
+  avclan.masterAddress = 0x0240; // CD-Changer adress (we are emulating CD-Changer)
+  avclan.slaveAddress  = 0x0160; // Head-Unit adress (If not working change to 0x0190 or 0x0140)
+  avclan.dataSize      = 0x05;
+  avclan.message[0]    = 0x00;
+  avclan.message[1]    = 0x01;
+  avclan.message[2]    = 0x12;
+  avclan.message[3]    = 0x10;
+  avclan.message[4]    = 0x43;
+  byte res = avclan.sendMessage();
+  if (res == 0) {
+    bSerial.println("Register command sent successfully");
+  } else {
+    bSerial.print("Register command failed with error: ");
+    bSerial.printHex8(res);
+    bSerial.println();
+    return; // If registration failed, please abort
+  }
+
+  // Step 2: Sending playback messagesa
+  res = avclan.sendMessage(&CmdPlayOk1);
+  if (res == 0) {
+    bSerial.println("PlayOk1 sent successfully");
+  } else {
+    bSerial.print("PlayOk1 failed with error: ");
+    bSerial.printHex8(res);
+    bSerial.println();
+  }
+
+  avclan.loadMessage(&CmdPlayOk4);
+  avclan.message[5] = 1; // Disk 1
+  avclan.message[6] = 1; // Track 1
+  avclan.message[7] = 0; // Minutes
+  avclan.message[8] = 0; // Seconds
+  res = avclan.sendMessage();
+  if (res == 0) {
+    bSerial.println("PlayOk4 sent successfully");
+  } else {
+    bSerial.print("PlayOk4 failed with error: ");
+    bSerial.printHex8(res);
+    bSerial.println();
+  }
+
+  res = avclan.sendMessage(&CmdPlayOk5);
+  if (res == 0) {
+    bSerial.println("PlayOk5 sent successfully");
+  } else {
+    bSerial.print("PlayOk5 failed with error: ");
+    bSerial.printHex8(res);
+    bSerial.println();
+  }
+
+  // Step 3: Activate Playback Mode
+  avclanDevice.cd_status = stPlay;
+  ENABLE_TIMER1_INT;
+  AZFM_ON;
+  bSerial.println("Playback mode activated");
 }
 
 // Чтение конфигурации из EEPROM
 void EERPOM_read_config(){
 	if (EEPROM.read(E_INIT) != 'T'){
 		EEPROM.write(E_MASTER1, 0x01);
-		EEPROM.write(E_MASTER2, 0x40);
+		EEPROM.write(E_MASTER2, 0x60);
 		EEPROM.write(E_READONLY, 0);
 		EEPROM.write(E_INIT, 'T');
 	}else{
@@ -208,5 +280,4 @@ void EERPOM_read_config(){
 		avclan.readonly    = EEPROM.read(E_READONLY);
 	}
 }
-
 
